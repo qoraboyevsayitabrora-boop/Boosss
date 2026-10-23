@@ -1,0 +1,42 @@
+name: rucoy-watch
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Test message (1 = yes)"
+        required: false
+        default: "0"
+
+concurrency:
+  group: rucoy-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr ffmpeg
+
+      - name: Install Python packages
+        run: pip install streamlink opencv-python-headless numpy pytesseract requests
+
+      - name: Run watcher
+        env:
+          STREAM_URL: ${{ secrets.STREAM_URL }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TEST: ${{ github.event.inputs.test }}
+        run: python rucoy_watch.py
