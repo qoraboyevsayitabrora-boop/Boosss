@@ -31,7 +31,18 @@ jobs:
           sudo apt-get install -y tesseract-ocr ffmpeg
 
       - name: Install Python packages
-        run: pip install streamlink opencv-python-headless numpy pytesseract requests
+        run: |
+          pip install -U "yt-dlp[default]" bgutil-ytdlp-pot-provider
+          pip install opencv-python-headless numpy pytesseract requests
+
+      - name: Start PO token provider
+        run: |
+          docker run --name bgutil-provider -d --init -p 127.0.0.1:4416:4416 brainicism/bgutil-ytdlp-pot-provider
+          sleep 8
+
+      - name: Check stream access
+        continue-on-error: true
+        run: yt-dlp --js-runtimes node -v -g "${{ secrets.STREAM_URL }}" 2>&1 | tail -n 25 | sed 's#https\?://[^ ]*#<url>#g'
 
       - name: Run watcher
         env:
@@ -39,4 +50,7 @@ jobs:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           TEST: ${{ github.event.inputs.test }}
-        run: python rucoy_watch.py
+          USE_YTDLP: "1"
+          YTDLP_ARGS: "--js-runtimes node"
+          MAX_HEIGHT: "720"
+        run: python rucoy_watch-1.py
